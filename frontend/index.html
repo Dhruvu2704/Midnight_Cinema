@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Midnight Cinema — Your Next Screening Awaits</title>
+  <meta name="description" content="A personal film curator. Search a movie and step into your next screening.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Fixed sprocket rail — decorative filmstrip edge. Hidden on small screens. -->
+  <div class="reel-rail" aria-hidden="true">
+    <div class="reel-rail__holes"></div>
+    <div class="reel-rail__counter" id="reelCounter">0001</div>
+  </div>
+
+  <!-- ================= NAVIGATION ================= -->
+  <header class="navbar" id="navbar">
+    <div class="navbar__inner">
+      <a href="#" class="brand" aria-label="Midnight Cinema, home">
+        <span class="brand__line">MIDNIGHT</span>
+        <span class="brand__line">CINEMA</span>
+      </a>
+
+      <button class="nav-toggle" id="navToggle" aria-label="Open navigation menu" aria-expanded="false" aria-controls="navLinks">
+        <span></span><span></span><span></span>
+      </button>
+
+      <nav class="nav-links" id="navLinks">
+        <a href="#" class="nav-links__item is-active">Home</a>
+        <a href="#selection" class="nav-links__item">Discover</a>
+        <a href="#" class="nav-links__item">Watchlist</a>
+        <span class="nav-links__est">EST. 2026</span>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- ================= HERO ================= -->
+    <section class="hero">
+      <div class="hero__curtain hero__curtain--left" aria-hidden="true"></div>
+      <div class="hero__curtain hero__curtain--right" aria-hidden="true"></div>
+      <div class="hero__glow" aria-hidden="true"></div>
+      <div class="hero__grain" aria-hidden="true"></div>
+      <div class="hero__vignette" aria-hidden="true"></div>
+      <div class="dust" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+
+      <span class="side-text side-text--right" aria-hidden="true">MIDNIGHT CINEMA &middot; PERSONAL FILM CURATOR</span>
+
+      <div class="hero__grid">
+
+        <div class="hero__copy-col reveal">
+          <p class="micro-label">Midnight Cinema Presents</p>
+
+          <h1 class="hero__headline">
+            Your Next<br>
+            <em>Screening</em><br>
+            Awaits.
+          </h1>
+
+          <p class="hero__copy">
+            Films selected around what you already love.
+            Search a movie and step into your next screening.
+          </p>
+
+          <div class="rule rule--grow" aria-hidden="true"></div>
+
+          <!-- ================= SEARCH ================= -->
+          <div class="search-console">
+            <p class="micro-label micro-label--muted">Search the Archive</p>
+
+            <form class="search" id="searchForm" novalidate>
+              <label for="movieInput" class="visually-hidden">Search a film</label>
+              <div class="search__field">
+                <input
+                  type="text"
+                  id="movieInput"
+                  class="search__input"
+                  placeholder="Search a film..."
+                  autocomplete="off"
+                  aria-describedby="searchStatus"
+                >
+                <span class="search__field-line" aria-hidden="true"></span>
+              </div>
+              <button type="submit" class="search__button" id="searchButton">
+                <span>Find a Film</span>
+              </button>
+            </form>
+
+            <p class="search__hint">Frame 0048 &middot; Roll 001 &middot; Try: Interstellar, Avatar, The Dark Knight</p>
+          </div>
+        </div>
+
+        <div class="hero__panel-col reveal reveal--delay-1">
+          <div class="atmos-panel" aria-hidden="true">
+            <span class="atmos-panel__eyebrow">Screen 01</span>
+            <span class="atmos-panel__title">Now<br>Showing</span>
+            <span class="atmos-panel__footer">The Personal Film Archive</span>
+            <!-- Backdrop / poster image will be inserted here in Phase 2. -->
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= RESULTS ================= -->
+    <section class="selection" id="selection">
+      <div class="selection__inner">
+
+        <div class="selection__header reveal">
+          <p class="ticket-label" id="screenLabel">Screen 01 &middot; Now Showing</p>
+          <h2 class="selection__title" id="selectionTitle">Tonight's Selection</h2>
+          <div class="rule" aria-hidden="true"></div>
+        </div>
+
+        <!-- Status region: empty state / loading / error / results -->
+        <div id="statusRegion" aria-live="polite">
+          <div class="empty-state" id="emptyState">
+            <p class="empty-state__label">Screen 01 &middot; No Film Loaded</p>
+            <p class="empty-state__title">The screen is quiet.</p>
+            <p class="empty-state__copy">Search the archive.<br>Your next screening is waiting.</p>
+          </div>
+        </div>
+
+        <div class="results" id="results" hidden>
+          <div class="featured" id="featured"></div>
+          <div class="results__beyond" id="beyondWrap" hidden>
+            <p class="results__beyond-label">Beyond This Screening</p>
+            <p class="results__beyond-sub">Other films from tonight's curation.</p>
+            <div class="card-grid" id="cardGrid"></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="footer">
+    <div class="footer__inner">
+      <p class="footer__brand">Midnight Cinema</p>
+      <p class="footer__tagline">A Personal Film Curator</p>
+      <div class="rule rule--thin" aria-hidden="true"></div>
+      <p class="footer__meta">Built with Python &middot; Flask &middot; JavaScript</p>
+      <p class="footer__meta footer__meta--est">EST. 2026</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
