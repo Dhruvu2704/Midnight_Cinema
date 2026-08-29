@@ -33,9 +33,9 @@
       </button>
 
       <nav class="nav-links" id="navLinks">
-        <a href="#" class="nav-links__item is-active">Home</a>
-        <a href="#selection" class="nav-links__item">Discover</a>
-        <a href="#" class="nav-links__item">Watchlist</a>
+        <a href="#hero" class="nav-links__item is-active" data-nav-link="home">Home</a>
+        <a href="#selection" class="nav-links__item" data-nav-link="discover">Discover</a>
+        <a href="#watchlist" class="nav-links__item" data-nav-link="watchlist">Watchlist</a>
         <span class="nav-links__est">EST. 2026</span>
       </nav>
     </div>
@@ -43,7 +43,7 @@
 
   <main>
     <!-- ================= HERO ================= -->
-    <section class="hero">
+    <section class="hero" id="hero">
       <div class="hero__curtain hero__curtain--left" aria-hidden="true"></div>
       <div class="hero__curtain hero__curtain--right" aria-hidden="true"></div>
       <div class="hero__glow" aria-hidden="true"></div>
@@ -95,16 +95,26 @@
               </button>
             </form>
 
-            <p class="search__hint">Frame 0048 &middot; Roll 001 &middot; Try: Interstellar, Avatar, The Dark Knight</p>
+            <div class="search-suggestions">
+              <span class="search-suggestions__label">Frame 0048 &middot; Roll 001 &middot; Try:</span>
+              <div class="search-suggestions__list" id="searchSuggestions">
+                <button type="button" class="suggestion-chip" data-suggestion="Interstellar">Interstellar</button>
+                <button type="button" class="suggestion-chip" data-suggestion="Avatar">Avatar</button>
+                <button type="button" class="suggestion-chip" data-suggestion="The Dark Knight">The Dark Knight</button>
+              </div>
+            </div>
           </div>
         </div>
 
         <div class="hero__panel-col reveal reveal--delay-1">
-          <div class="atmos-panel" aria-hidden="true">
-            <span class="atmos-panel__eyebrow">Screen 01</span>
-            <span class="atmos-panel__title">Now<br>Showing</span>
-            <span class="atmos-panel__footer">The Personal Film Archive</span>
-            <!-- Backdrop / poster image will be inserted here in Phase 2. -->
+          <div class="atmos-panel" id="heroPanel">
+            <div class="atmos-panel__backdrop" id="heroPanelBackdrop"></div>
+            <div class="atmos-panel__scrim" aria-hidden="true"></div>
+            <div class="atmos-panel__content" id="heroPanelContent">
+              <span class="atmos-panel__eyebrow">Screen 01</span>
+              <span class="atmos-panel__title">Now<br>Showing</span>
+              <span class="atmos-panel__footer">The Personal Film Archive</span>
+            </div>
           </div>
         </div>
 
@@ -141,6 +151,21 @@
 
       </div>
     </section>
+
+    <!-- ================= WATCHLIST ================= -->
+    <section class="watchlist-section" id="watchlist">
+      <div class="watchlist-section__inner">
+
+        <div class="selection__header reveal">
+          <p class="ticket-label">Screen 02 &middot; Your Archive</p>
+          <h2 class="selection__title">Your Watchlist</h2>
+          <div class="rule" aria-hidden="true"></div>
+        </div>
+
+        <div id="watchlistRegion" aria-live="polite"></div>
+
+      </div>
+    </section>
   </main>
 
   <!-- ================= FOOTER ================= -->
@@ -148,11 +173,28 @@
     <div class="footer__inner">
       <p class="footer__brand">Midnight Cinema</p>
       <p class="footer__tagline">A Personal Film Curator</p>
+      <nav class="footer__nav" aria-label="Footer navigation">
+        <a href="#hero" class="footer__nav-link" data-nav-link="home">Home</a>
+        <a href="#selection" class="footer__nav-link" data-nav-link="discover">Discover</a>
+        <a href="#watchlist" class="footer__nav-link" data-nav-link="watchlist">Watchlist</a>
+      </nav>
       <div class="rule rule--thin" aria-hidden="true"></div>
       <p class="footer__meta">Built with Python &middot; Flask &middot; JavaScript</p>
       <p class="footer__meta footer__meta--est">EST. 2026</p>
+      <p class="footer__attribution">This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
     </div>
   </footer>
+
+  <!-- ================= TRAILER MODAL ================= -->
+  <div class="trailer-modal" id="trailerModal" hidden>
+    <div class="trailer-modal__overlay" id="trailerOverlay"></div>
+    <div class="trailer-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="trailerModalTitle">
+      <button type="button" class="trailer-modal__close" id="trailerCloseBtn" aria-label="Close trailer">&times;</button>
+      <p class="trailer-modal__label">Now Screening &middot; Trailer</p>
+      <h3 class="trailer-modal__title" id="trailerModalTitle"></h3>
+      <div class="trailer-modal__frame" id="trailerFrame"></div>
+    </div>
+  </div>
 
   <script src="script.js"></script>
 </body>
