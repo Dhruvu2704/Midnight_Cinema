@@ -2,6 +2,20 @@
 name = "midnight-cinema"
 version = "1.0.0"
 requires-python = "~=3.12.0"
+dependencies = [
+    "Flask==3.1.3",
+    "Flask-Cors==6.0.5",
+    "Flask-SQLAlchemy==3.1.1",
+    "requests==2.34.2",
+    "python-dotenv==1.2.3",
+    "joblib==1.5.3",
+    "numpy==2.5.2",
+    "pandas==3.0.5",
+    "psycopg2-binary==2.9.10",
+    "scikit-learn==1.9.0",
+    "scipy==1.18.1",
+    "threadpoolctl==3.6.0",
+]
 
 [tool.vercel]
 # Points Vercel at the existing Flask instance in backend/app.py via
