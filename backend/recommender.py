@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pandas as pd
 from ast import literal_eval
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -8,7 +10,14 @@ from sklearn.metrics.pairwise import cosine_similarity
 # 1. LOAD CLEANED DATASET
 # -----------------------------------------
 
-movies = pd.read_csv("data/processed/movies.csv")
+# Resolved relative to this file (backend/recommender.py), not the
+# process's current working directory -- a plain "data/processed/..."
+# relative path only worked locally because Flask happened to be
+# started from the repo root. On Vercel the working directory isn't
+# guaranteed, so this must be module-relative instead.
+DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "processed" / "movies.csv"
+
+movies = pd.read_csv(DATA_PATH)
 
 
 # -----------------------------------------

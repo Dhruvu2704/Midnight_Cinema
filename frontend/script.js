@@ -10,7 +10,27 @@
      trailer { name, key, url } | null
    =================================================================== */
 
-const API_BASE_URL = "http://127.0.0.1:5000";
+/**
+ * Same-origin by default -- required for Vercel (frontend and
+ * /api/* share one domain there) and works unchanged for any
+ * *.vercel.app deployment without editing this file.
+ *
+ * The one exception is local development when this file is opened
+ * through a separate static server (Live Server on 5500,
+ * `python -m http.server` on 8000, etc.) while Flask runs on its
+ * own port -- in that case, talk to Flask directly.
+ */
+const API_BASE_URL = (() => {
+  const { protocol, hostname, port } = window.location;
+  const isLocalHost = hostname === "127.0.0.1" || hostname === "localhost";
+  const isFlaskDevPort = port === "5000";
+
+  if (!isLocalHost || isFlaskDevPort) {
+    return "";
+  }
+
+  return `${protocol}//${hostname}:5000`;
+})();
 
 // A very small allowlist check for the YouTube video IDs the backend
 // produces. We only ever build embed URLs from keys matching this.
@@ -475,9 +495,14 @@ if (loginForm) {
 
     loginSubmitBtn.disabled = true;
 
-    const { ok, data } = await loginUser(identifier, password);
+    const { ok, data, networkError } = await loginUser(identifier, password);
 
     loginSubmitBtn.disabled = false;
+
+    if (networkError) {
+      showAuthMessage("login", "Unable to connect to the cinema server. Please check your connection and try again.");
+      return;
+    }
 
     if (!ok || !data || !data.authenticated) {
       showAuthMessage("login", (data && data.error) || "The archive couldn't verify those credentials.");
@@ -515,12 +540,17 @@ if (registerForm) {
 
     registerSubmitBtn.disabled = true;
 
-    const { ok, data } = await registerUser(username, email, password, confirmPassword);
+    const { ok, data, networkError } = await registerUser(username, email, password, confirmPassword);
 
     registerSubmitBtn.disabled = false;
 
+    if (networkError) {
+      showAuthMessage("register", "Unable to connect to the cinema server. Please check your connection and try again.");
+      return;
+    }
+
     if (!ok || !data || !data.authenticated) {
-      showAuthMessage("register", (data && data.error) || "Please enter a valid email.");
+      showAuthMessage("register", (data && data.error) || "Something went wrong creating your account. Please try again.");
       return;
     }
 
@@ -1459,7 +1489,7 @@ trailerOverlay.addEventListener("click", closeTrailerModal);
 async function getRecommendations(movieTitle) {
   setLoadingState();
 
-  const url = `${API_BASE_URL}/recommend?movie=${encodeURIComponent(movieTitle)}`;
+  const url = `${API_BASE_URL}/api/recommend?movie=${encodeURIComponent(movieTitle)}`;
 
   let response;
   try {

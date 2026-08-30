@@ -1,0 +1,17 @@
+[project]
+name = "midnight-cinema"
+version = "1.0.0"
+requires-python = "~=3.12.0"
+
+[tool.vercel]
+# Points Vercel at the existing Flask instance in backend/app.py via
+# the thin backend/vercel_app.py wrapper (see that file for why the
+# wrapper exists), instead of moving or rewriting any backend module.
+entrypoint = "backend.vercel_app:app"
+
+[tool.vercel.scripts]
+# Copies frontend/ -> public/ at build time so Vercel's CDN serves
+# index.html, script.js, and style.css as static assets. frontend/
+# stays the single source of truth you edit locally; public/ is a
+# generated artifact and isn't committed (see .gitignore).
+build = "python build.py"

@@ -1,0 +1,14 @@
+# Belt-and-suspenders for `vercel deploy` run directly from a local
+# checkout -- Git-connected deployments already skip anything in
+# .gitignore, but this covers the CLI path too.
+
+data/raw/
+backend/midnight_cinema.db
+backend/__pycache__/
+__pycache__/
+venv/
+.venv/
+.git/
+.env
+*.pyc
+.vercel/

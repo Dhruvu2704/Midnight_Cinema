@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "backend/vercel_app.py": {
+      "maxDuration": 30,
+      "excludeFiles": "{frontend/**,public/**,data/raw/**,backend/midnight_cinema.db,backend/__pycache__/**,**/__pycache__/**,venv/**,.venv/**,**/*.pyc}"
+    }
+  }
+}

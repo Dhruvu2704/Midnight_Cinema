@@ -1,7 +1,7 @@
 """
 ===================================================================
 MIDNIGHT CINEMA — DATABASE
-SQLite (via Flask-SQLAlchemy) models for Users and Watchlist items.
+SQLAlchemy models for Users and Watchlist items.
 
 USERS
     ↓ (users.id → watchlist.user_id)
@@ -9,10 +9,17 @@ WATCHLIST
 
 The database is the single source of truth for the watchlist.
 localStorage is no longer used for persistence.
+
+Local development uses a SQLite file next to this module, same as
+before. Vercel's filesystem is read-only and ephemeral between
+invocations, so production requires a real hosted database instead
+-- set DATABASE_URL (a Postgres connection string) and this module
+uses that automatically.
 ===================================================================
 """
 
 import json
+import os
 from datetime import datetime
 
 from flask_sqlalchemy import SQLAlchemy
@@ -124,15 +131,49 @@ class WatchlistItem(db.Model):
 
 
 # =========================================================
+# CONNECTION STRING
+# =========================================================
+
+def _resolve_database_uri(app):
+    """
+    DATABASE_URL (set on Vercel to a hosted Postgres connection
+    string) always wins. Falls back to the local SQLite file when
+    it isn't set, so local development is unchanged.
+    """
+
+    database_url = os.getenv("DATABASE_URL")
+
+    if database_url:
+        # SQLAlchemy 2.x / psycopg2 require the "postgresql://"
+        # scheme; some providers (Neon, Heroku-style URLs) still
+        # hand out the older "postgres://" form.
+        if database_url.startswith("postgres://"):
+            database_url = "postgresql://" + database_url[len("postgres://"):]
+
+        return database_url
+
+    return "sqlite:///" + os.path.join(app.root_path, "midnight_cinema.db")
+
+
+# =========================================================
 # INITIALIZATION
 # =========================================================
 
 def init_db(app):
     """
     Binds SQLAlchemy to the Flask app and creates any tables that
-    don't exist yet. Safe to call every time the app starts —
-    create_all() is a no-op for tables that already exist.
+    don't exist yet. Safe to call every time the app starts --
+    create_all() only creates missing tables; it never drops or
+    recreates existing ones, so it never touches existing users or
+    watchlists.
     """
+    app.config["SQLALCHEMY_DATABASE_URI"] = _resolve_database_uri(app)
+
+    # pool_pre_ping avoids handing out a connection that a hosted
+    # Postgres provider has already closed for being idle, which
+    # happens often between Vercel's serverless invocations.
+    app.config.setdefault("SQLALCHEMY_ENGINE_OPTIONS", {"pool_pre_ping": True})
+
     db.init_app(app)
 
     with app.app_context():
