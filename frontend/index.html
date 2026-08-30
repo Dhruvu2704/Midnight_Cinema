@@ -14,34 +14,83 @@
 </head>
 <body>
 
-  <!-- Fixed sprocket rail — decorative filmstrip edge. Hidden on small screens. -->
-  <div class="reel-rail" aria-hidden="true">
-    <div class="reel-rail__holes"></div>
-    <div class="reel-rail__counter" id="reelCounter">0001</div>
-  </div>
-
-  <!-- ================= NAVIGATION ================= -->
-  <header class="navbar" id="navbar">
-    <div class="navbar__inner">
-      <a href="#" class="brand" aria-label="Midnight Cinema, home">
-        <span class="brand__line">MIDNIGHT</span>
-        <span class="brand__line">CINEMA</span>
-      </a>
-
-      <button class="nav-toggle" id="navToggle" aria-label="Open navigation menu" aria-expanded="false" aria-controls="navLinks">
-        <span></span><span></span><span></span>
-      </button>
-
-      <nav class="nav-links" id="navLinks">
-        <a href="#hero" class="nav-links__item is-active" data-nav-link="home">Home</a>
-        <a href="#selection" class="nav-links__item" data-nav-link="discover">Discover</a>
-        <a href="#watchlist" class="nav-links__item" data-nav-link="watchlist">Watchlist</a>
-        <span class="nav-links__est">EST. 2026</span>
-      </nav>
+  <!-- ================= LANDING PAGE ================= -->
+  <!-- First thing a visitor sees. Shown when logged out; skipped
+       straight to the app when an authenticated session exists. -->
+  <section class="landing" id="landingView">
+    <div class="landing__grain" aria-hidden="true"></div>
+    <div class="landing__vignette" aria-hidden="true"></div>
+    <div class="landing__filmstrip landing__filmstrip--left" aria-hidden="true"></div>
+    <div class="landing__filmstrip landing__filmstrip--right" aria-hidden="true"></div>
+    <div class="dust" aria-hidden="true">
+      <span></span><span></span><span></span><span></span><span></span>
     </div>
-  </header>
 
-  <main>
+    <div class="landing__inner">
+      <p class="micro-label landing__eyebrow reveal is-visible">Midnight Cinema Presents</p>
+
+      <h1 class="landing__headline reveal is-visible">
+        Your Next<br>
+        <em>Screening</em><br>
+        Awaits.
+      </h1>
+
+      <p class="landing__copy reveal is-visible reveal--delay-1">
+        A personal film curator that learns what you love
+        and finds what you should watch next.
+      </p>
+
+      <div class="rule landing__rule" aria-hidden="true"></div>
+
+      <div class="landing__actions reveal is-visible reveal--delay-1">
+        <button type="button" class="landing__btn landing__btn--primary" id="enterCinemaBtn">
+          <span>Enter the Cinema</span>
+        </button>
+        <button type="button" class="landing__btn landing__btn--ghost" id="createAccountBtn">
+          <span>Create an Account</span>
+        </button>
+      </div>
+
+      <p class="landing__welcome-back" id="landingWelcomeBack" hidden></p>
+    </div>
+
+    <p class="landing__meta">EST. 2026 &middot; Built with Python &middot; Flask &middot; JavaScript</p>
+  </section>
+
+  <!-- ================= APPLICATION ================= -->
+  <div id="appView" hidden>
+
+    <!-- Fixed sprocket rail — decorative filmstrip edge. Hidden on small screens. -->
+    <div class="reel-rail" aria-hidden="true">
+      <div class="reel-rail__holes"></div>
+      <div class="reel-rail__counter" id="reelCounter">0001</div>
+    </div>
+
+    <!-- ================= NAVIGATION ================= -->
+    <header class="navbar" id="navbar">
+      <div class="navbar__inner">
+        <a href="#" class="brand" aria-label="Midnight Cinema, home">
+          <span class="brand__line">MIDNIGHT</span>
+          <span class="brand__line">CINEMA</span>
+        </a>
+
+        <button class="nav-toggle" id="navToggle" aria-label="Open navigation menu" aria-expanded="false" aria-controls="navLinks">
+          <span></span><span></span><span></span>
+        </button>
+
+        <nav class="nav-links" id="navLinks">
+          <a href="#hero" class="nav-links__item is-active" data-nav-link="home">Home</a>
+          <a href="#selection" class="nav-links__item" data-nav-link="discover">Discover</a>
+          <a href="#watchlist" class="nav-links__item" data-nav-link="watchlist">Watchlist</a>
+          <button type="button" class="nav-links__item nav-links__item--auth" id="navLoginBtn">Login</button>
+          <span class="nav-links__user" id="navUserLabel" hidden></span>
+          <button type="button" class="nav-links__item nav-links__item--auth" id="navLogoutBtn" hidden>Logout</button>
+          <span class="nav-links__est">EST. 2026</span>
+        </nav>
+      </div>
+    </header>
+
+    <main>
     <!-- ================= HERO ================= -->
     <section class="hero" id="hero">
       <div class="hero__curtain hero__curtain--left" aria-hidden="true"></div>
@@ -193,6 +242,79 @@
       <p class="trailer-modal__label">Now Screening &middot; Trailer</p>
       <h3 class="trailer-modal__title" id="trailerModalTitle"></h3>
       <div class="trailer-modal__frame" id="trailerFrame"></div>
+    </div>
+  </div>
+
+  </div><!-- /#appView -->
+
+  <!-- ================= AUTH MODAL (LOGIN / REGISTER) ================= -->
+  <div class="auth-modal" id="authModal" hidden>
+    <div class="auth-modal__overlay" id="authModalOverlay"></div>
+    <div class="auth-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+      <button type="button" class="auth-modal__close" id="authModalClose" aria-label="Close">&times;</button>
+
+      <!-- LOGIN -->
+      <div class="auth-modal__panel" id="loginPanel">
+        <p class="micro-label">Member Access</p>
+        <h3 class="auth-modal__title" id="authModalTitle">Enter the Cinema</h3>
+        <p class="auth-modal__lead" id="authModalLead"></p>
+
+        <p class="auth-modal__message" id="loginMessage" role="alert" hidden></p>
+
+        <form class="auth-form" id="loginForm" novalidate>
+          <label class="auth-form__label" for="loginIdentifier">
+            Archive Identifier <span class="auth-form__hint">email or username</span>
+          </label>
+          <input class="auth-form__input" type="text" id="loginIdentifier" autocomplete="username" required>
+
+          <label class="auth-form__label" for="loginPassword">
+            Access Code <span class="auth-form__hint">password</span>
+          </label>
+          <input class="auth-form__input" type="password" id="loginPassword" autocomplete="current-password" required>
+
+          <button type="submit" class="auth-form__submit" id="loginSubmitBtn">
+            <span>Enter the Cinema</span>
+          </button>
+        </form>
+
+        <p class="auth-modal__switch">
+          New to the archive?
+          <button type="button" class="auth-modal__link" id="switchToRegister">Create an account</button>
+        </p>
+      </div>
+
+      <!-- REGISTER -->
+      <div class="auth-modal__panel" id="registerPanel" hidden>
+        <p class="micro-label">Join the Archive</p>
+        <h3 class="auth-modal__title">Create an Account</h3>
+
+        <p class="auth-modal__message" id="registerMessage" role="alert" hidden></p>
+
+        <form class="auth-form" id="registerForm" novalidate>
+          <label class="auth-form__label" for="registerUsername">Name</label>
+          <input class="auth-form__input" type="text" id="registerUsername" autocomplete="username" required>
+
+          <label class="auth-form__label" for="registerEmail">Email</label>
+          <input class="auth-form__input" type="email" id="registerEmail" autocomplete="email" required>
+
+          <label class="auth-form__label" for="registerPassword">
+            Access Code <span class="auth-form__hint">password, min. 8 characters</span>
+          </label>
+          <input class="auth-form__input" type="password" id="registerPassword" autocomplete="new-password" minlength="8" required>
+
+          <label class="auth-form__label" for="registerConfirmPassword">Confirm Access Code</label>
+          <input class="auth-form__input" type="password" id="registerConfirmPassword" autocomplete="new-password" minlength="8" required>
+
+          <button type="submit" class="auth-form__submit" id="registerSubmitBtn">
+            <span>Create Account</span>
+          </button>
+        </form>
+
+        <p class="auth-modal__switch">
+          Already a member?
+          <button type="button" class="auth-modal__link" id="switchToLogin">Sign in</button>
+        </p>
+      </div>
     </div>
   </div>
 

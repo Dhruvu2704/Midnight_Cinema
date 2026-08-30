@@ -1,13 +1,86 @@
+import os
+from datetime import timedelta
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from dotenv import load_dotenv
 
 from recommender import recommend
 from tmdb_service import get_movie_data
+from database import init_db
+from auth import auth_bp
+from watchlist import watchlist_bp
 
+
+load_dotenv()
 
 app = Flask(__name__)
 
-CORS(app)
+
+# =========================================================
+# CONFIGURATION
+# =========================================================
+
+# Used to sign the session cookie. Set a real value in .env for
+# anything beyond local development.
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key-change-me")
+
+# SQLite database file, created alongside this app.
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(
+    app.root_path, "midnight_cinema.db"
+)
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# Session / cookie behaviour.
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=14)
+
+
+# =========================================================
+# CORS
+# =========================================================
+
+# The frontend and Flask run on different local ports during
+# development, so cookies need `supports_credentials=True` plus an
+# explicit origin allowlist (credentialed requests can't use "*").
+# Add your deployed frontend origin via ALLOWED_ORIGINS in .env,
+# comma-separated, e.g. "https://midnightcinema.example.com".
+default_origins = [
+    "http://127.0.0.1:5500",
+    "http://localhost:5500",
+    "http://127.0.0.1:5000",
+    "http://localhost:5000",
+    "http://127.0.0.1:8000",
+    "http://localhost:8000"
+]
+
+extra_origins = [
+    origin.strip()
+    for origin in os.getenv("ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+
+CORS(
+    app,
+    supports_credentials=True,
+    origins=default_origins + extra_origins
+)
+
+
+# =========================================================
+# DATABASE
+# =========================================================
+
+init_db(app)
+
+
+# =========================================================
+# BLUEPRINTS
+# =========================================================
+
+app.register_blueprint(auth_bp)
+app.register_blueprint(watchlist_bp)
 
 
 # =========================================================

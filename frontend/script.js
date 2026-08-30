@@ -52,11 +52,60 @@ const searchSuggestions = document.getElementById("searchSuggestions");
 
 const watchlistRegion = document.getElementById("watchlistRegion");
 
+// ---------- LANDING / AUTH DOM REFERENCES ----------
+const landingView = document.getElementById("landingView");
+const appView = document.getElementById("appView");
+const enterCinemaBtn = document.getElementById("enterCinemaBtn");
+const createAccountBtn = document.getElementById("createAccountBtn");
+const landingWelcomeBack = document.getElementById("landingWelcomeBack");
+
+const navLoginBtn = document.getElementById("navLoginBtn");
+const navLogoutBtn = document.getElementById("navLogoutBtn");
+const navUserLabel = document.getElementById("navUserLabel");
+
+const authModal = document.getElementById("authModal");
+const authModalOverlay = document.getElementById("authModalOverlay");
+const authModalClose = document.getElementById("authModalClose");
+
+const loginPanel = document.getElementById("loginPanel");
+const registerPanel = document.getElementById("registerPanel");
+
+const loginForm = document.getElementById("loginForm");
+const loginIdentifier = document.getElementById("loginIdentifier");
+const loginPassword = document.getElementById("loginPassword");
+const loginMessage = document.getElementById("loginMessage");
+const loginSubmitBtn = document.getElementById("loginSubmitBtn");
+
+const registerForm = document.getElementById("registerForm");
+const registerUsername = document.getElementById("registerUsername");
+const registerEmail = document.getElementById("registerEmail");
+const registerPassword = document.getElementById("registerPassword");
+const registerConfirmPassword = document.getElementById("registerConfirmPassword");
+const registerMessage = document.getElementById("registerMessage");
+const registerSubmitBtn = document.getElementById("registerSubmitBtn");
+
+const switchToRegister = document.getElementById("switchToRegister");
+const switchToLogin = document.getElementById("switchToLogin");
+
+let lastFocusedBeforeAuthModal = null;
+
 // Holds the current recommendation set so a card can be promoted to
 // "featured" client-side, without another network request.
 let currentRecommendations = [];
 let currentSearchedMovie = "";
 let lastFocusedBeforeModal = null;
+
+// ---------- AUTHENTICATION STATE ----------
+// The backend session is always the source of truth for whether
+// someone is logged in — this is just a client-side mirror of it,
+// refreshed via checkAuth() / after login / register / logout.
+let authState = { authenticated: false, user: null };
+
+// Client-side cache of the current user's watchlist, populated from
+// GET /api/watchlist. The database is the source of truth; this
+// cache just avoids a network round trip on every render.
+let watchlistCache = [];
+let watchlistLoaded = false;
 
 // Default (pre-search) hero panel markup, restored by resetHeroPanel().
 const HERO_PANEL_DEFAULT_MARKUP = `
@@ -64,9 +113,6 @@ const HERO_PANEL_DEFAULT_MARKUP = `
   <span class="atmos-panel__title">Now<br>Showing</span>
   <span class="atmos-panel__footer">The Personal Film Archive</span>
 `;
-
-// localStorage key for the persistent Watchlist feature.
-const WATCHLIST_STORAGE_KEY = "midnightCinema.watchlist";
 
 // ---------- MOBILE NAV ----------
 function closeMobileNav() {
@@ -195,6 +241,297 @@ document.querySelectorAll("[data-nav-link]").forEach((link) => {
     reelCounter.textContent = String(frame).padStart(4, "0");
   }, 2200);
 })();
+
+// ---------- API HELPER ----------
+
+/**
+ * Shared fetch wrapper for every call to the Flask backend.
+ * `credentials: "include"` is what lets the browser send/receive the
+ * signed session cookie Flask issues on login — without it the
+ * backend would never recognize an authenticated request.
+ */
+async function apiFetch(path, options = {}) {
+  let response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers || {})
+      },
+      ...options
+    });
+  } catch (networkError) {
+    return { ok: false, status: 0, data: null, networkError: true };
+  }
+
+  let data = null;
+  try {
+    data = await response.json();
+  } catch (parseError) {
+    data = null;
+  }
+
+  return { ok: response.ok, status: response.status, data };
+}
+
+// ---------- LANDING / APP VIEW SWITCHING ----------
+
+function showLandingView() {
+  if (landingView) landingView.hidden = false;
+  if (appView) appView.hidden = true;
+  document.body.classList.remove("is-in-cinema");
+}
+
+function showAppView() {
+  if (landingView) landingView.hidden = true;
+  if (appView) appView.hidden = false;
+  document.body.classList.add("is-in-cinema");
+}
+
+// ---------- AUTH-AWARE UI ----------
+
+/**
+ * Reflects the current authState across the nav (Login/Logout,
+ * "Welcome back") and the landing page's entry buttons. Never
+ * touches the Watchlist section directly — renderWatchlist() owns
+ * that and is called separately wherever authState changes.
+ */
+function updateAuthUI() {
+  const isAuthed = authState.authenticated;
+  const name = isAuthed && authState.user ? authState.user.name : "";
+
+  if (navLoginBtn) navLoginBtn.hidden = isAuthed;
+  if (navLogoutBtn) navLogoutBtn.hidden = !isAuthed;
+
+  if (navUserLabel) {
+    navUserLabel.hidden = !isAuthed;
+    navUserLabel.textContent = isAuthed ? `Welcome back, ${name}.` : "";
+  }
+
+  if (landingWelcomeBack) {
+    landingWelcomeBack.hidden = !isAuthed;
+    landingWelcomeBack.textContent = isAuthed ? `Welcome back, ${name}.` : "";
+  }
+}
+
+/**
+ * Confirms the current session with the backend. The frontend never
+ * assumes authentication from anything stored locally — this is the
+ * only source of truth for whether the visitor is signed in.
+ */
+async function checkAuth() {
+  const { ok, data } = await apiFetch("/api/auth/me");
+
+  authState = ok && data && data.authenticated
+    ? { authenticated: true, user: data.user }
+    : { authenticated: false, user: null };
+
+  updateAuthUI();
+  return authState;
+}
+
+async function loginUser(identifier, password) {
+  return apiFetch("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ identifier, password })
+  });
+}
+
+async function registerUser(username, email, password, confirmPassword) {
+  return apiFetch("/api/auth/register", {
+    method: "POST",
+    body: JSON.stringify({
+      username,
+      email,
+      password,
+      confirm_password: confirmPassword
+    })
+  });
+}
+
+async function logoutUser() {
+  await apiFetch("/api/auth/logout", { method: "POST" });
+
+  authState = { authenticated: false, user: null };
+  watchlistCache = [];
+
+  updateAuthUI();
+  renderWatchlist();
+  closeMobileNav();
+  showLandingView();
+}
+
+// ---------- AUTH MODAL ----------
+
+function clearAuthMessages() {
+  if (loginMessage) {
+    loginMessage.hidden = true;
+    loginMessage.textContent = "";
+  }
+  if (registerMessage) {
+    registerMessage.hidden = true;
+    registerMessage.textContent = "";
+  }
+}
+
+function showAuthMessage(panel, text) {
+  const el = panel === "register" ? registerMessage : loginMessage;
+  if (!el) return;
+  el.textContent = text;
+  el.hidden = false;
+}
+
+/**
+ * Opens the auth modal to either the login or register panel.
+ * `leadText`, when given, is shown as a short line above the form —
+ * used for the "your archive is waiting" prompt when an unauthenticated
+ * visitor tries to save a film.
+ */
+function openAuthModal(panel, leadText) {
+  if (!authModal) return;
+
+  lastFocusedBeforeAuthModal = document.activeElement;
+  clearAuthMessages();
+
+  const authModalLead = document.getElementById("authModalLead");
+  if (authModalLead) {
+    authModalLead.textContent = leadText || "";
+    authModalLead.hidden = !leadText;
+  }
+
+  switchAuthPanel(panel);
+
+  authModal.hidden = false;
+  document.body.style.overflow = "hidden";
+  document.addEventListener("keydown", handleAuthModalKeydown);
+
+  const firstInput = panel === "register" ? registerUsername : loginIdentifier;
+  if (firstInput) firstInput.focus();
+}
+
+function closeAuthModal() {
+  authModal.hidden = true;
+  document.body.style.overflow = "";
+  document.removeEventListener("keydown", handleAuthModalKeydown);
+
+  if (lastFocusedBeforeAuthModal && typeof lastFocusedBeforeAuthModal.focus === "function") {
+    lastFocusedBeforeAuthModal.focus();
+  }
+}
+
+function switchAuthPanel(panel) {
+  clearAuthMessages();
+
+  const showRegister = panel === "register";
+  if (loginPanel) loginPanel.hidden = showRegister;
+  if (registerPanel) registerPanel.hidden = !showRegister;
+
+  const firstInput = showRegister ? registerUsername : loginIdentifier;
+  if (firstInput) firstInput.focus();
+}
+
+function handleAuthModalKeydown(event) {
+  if (event.key === "Escape") closeAuthModal();
+}
+
+if (authModalClose) authModalClose.addEventListener("click", closeAuthModal);
+if (authModalOverlay) authModalOverlay.addEventListener("click", closeAuthModal);
+if (switchToRegister) switchToRegister.addEventListener("click", () => switchAuthPanel("register"));
+if (switchToLogin) switchToLogin.addEventListener("click", () => switchAuthPanel("login"));
+
+if (navLoginBtn) navLoginBtn.addEventListener("click", () => openAuthModal("login"));
+if (navLogoutBtn) navLogoutBtn.addEventListener("click", () => logoutUser());
+
+if (enterCinemaBtn) {
+  enterCinemaBtn.addEventListener("click", () => {
+    if (authState.authenticated) {
+      showAppView();
+    } else {
+      openAuthModal("login");
+    }
+  });
+}
+
+if (createAccountBtn) {
+  createAccountBtn.addEventListener("click", () => openAuthModal("register"));
+}
+
+// ---------- AUTH FORMS ----------
+
+if (loginForm) {
+  loginForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    clearAuthMessages();
+
+    const identifier = loginIdentifier.value.trim();
+    const password = loginPassword.value;
+
+    if (!identifier || !password) {
+      showAuthMessage("login", "The archive couldn't verify those credentials.");
+      return;
+    }
+
+    loginSubmitBtn.disabled = true;
+
+    const { ok, data } = await loginUser(identifier, password);
+
+    loginSubmitBtn.disabled = false;
+
+    if (!ok || !data || !data.authenticated) {
+      showAuthMessage("login", (data && data.error) || "The archive couldn't verify those credentials.");
+      return;
+    }
+
+    authState = { authenticated: true, user: data.user };
+    loginForm.reset();
+    closeAuthModal();
+    updateAuthUI();
+    showAppView();
+    await loadWatchlist();
+  });
+}
+
+if (registerForm) {
+  registerForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    clearAuthMessages();
+
+    const username = registerUsername.value.trim();
+    const email = registerEmail.value.trim();
+    const password = registerPassword.value;
+    const confirmPassword = registerConfirmPassword.value;
+
+    if (!username || !email || !password || !confirmPassword) {
+      showAuthMessage("register", "Every field is required to join the archive.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      showAuthMessage("register", "The passwords don't match.");
+      return;
+    }
+
+    registerSubmitBtn.disabled = true;
+
+    const { ok, data } = await registerUser(username, email, password, confirmPassword);
+
+    registerSubmitBtn.disabled = false;
+
+    if (!ok || !data || !data.authenticated) {
+      showAuthMessage("register", (data && data.error) || "Please enter a valid email.");
+      return;
+    }
+
+    authState = { authenticated: true, user: data.user };
+    registerForm.reset();
+    closeAuthModal();
+    updateAuthUI();
+    showAppView();
+    await loadWatchlist();
+  });
+}
 
 // ---------- UTILITIES ----------
 
@@ -690,41 +1027,20 @@ function createMovieCard(movie, filmNumber, index) {
   return card;
 }
 
-// ---------- WATCHLIST (localStorage) ----------
-
-/**
- * Reads the persisted watchlist. Always returns an array, even if
- * localStorage is unavailable, empty, or holds malformed JSON.
- */
-function getWatchlist() {
-  try {
-    const raw = localStorage.getItem(WATCHLIST_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    console.error("Unable to read watchlist from localStorage:", error);
-    return [];
-  }
-}
-
-/**
- * Persists the full watchlist array, overwriting whatever was there.
- */
-function saveWatchlist(list) {
-  try {
-    localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(list));
-  } catch (error) {
-    console.error("Unable to save watchlist to localStorage:", error);
-  }
-}
+// ---------- WATCHLIST (database-backed, per user) ----------
+//
+// The database is the source of truth. watchlistCache is just a
+// client-side mirror of GET /api/watchlist so isInWatchlist() and
+// the various render functions can stay synchronous. It's loaded
+// fresh on login and cleared on logout.
 
 function isInWatchlist(movieId) {
-  return getWatchlist().some((entry) => entry.movie_id === movieId);
+  return watchlistCache.some((entry) => entry.movie_id === movieId);
 }
 
 /**
- * Picks out only the fields the Watchlist needs to render itself later,
- * so we're not accidentally persisting stray fields forever.
+ * Picks out only the fields the backend watchlist API expects,
+ * mirroring the WatchlistItem model in database.py.
  */
 function toWatchlistEntry(movie) {
   return {
@@ -743,21 +1059,78 @@ function toWatchlistEntry(movie) {
   };
 }
 
-function addToWatchlist(movie) {
-  const list = getWatchlist();
-  if (list.some((entry) => entry.movie_id === movie.movie_id)) return;
+/**
+ * Loads the authenticated user's watchlist from the backend into
+ * watchlistCache and re-renders the Watchlist section. Called after
+ * checkAuth() confirms a session, and after login/register.
+ */
+async function loadWatchlist() {
+  if (!authState.authenticated) {
+    watchlistCache = [];
+    watchlistLoaded = true;
+    renderWatchlist();
+    return;
+  }
 
-  list.unshift(toWatchlistEntry(movie));
-  saveWatchlist(list);
-  updateWatchlistButtons();
+  const { ok, data } = await apiFetch("/api/watchlist");
+
+  watchlistCache = ok && data && Array.isArray(data.watchlist) ? data.watchlist : [];
+  watchlistLoaded = true;
+
   renderWatchlist();
+  updateWatchlistButtons();
 }
 
-function removeFromWatchlist(movieId) {
-  const list = getWatchlist().filter((entry) => entry.movie_id !== movieId);
-  saveWatchlist(list);
+/**
+ * Adds a film to the authenticated user's watchlist. Updates the
+ * local cache optimistically so the UI feels instant, then confirms
+ * against the backend and rolls back on failure. If the visitor
+ * isn't signed in, this opens the sign-in prompt instead of
+ * fabricating local-only state.
+ */
+async function addToWatchlist(movie) {
+  if (!authState.authenticated) {
+    openAuthModal("login", "Your archive is waiting. Sign in to keep your screenings.");
+    return;
+  }
+
+  if (isInWatchlist(movie.movie_id)) return;
+
+  watchlistCache.unshift(toWatchlistEntry(movie));
   updateWatchlistButtons();
   renderWatchlist();
+
+  const { ok } = await apiFetch("/api/watchlist", {
+    method: "POST",
+    body: JSON.stringify(toWatchlistEntry(movie))
+  });
+
+  if (!ok) {
+    watchlistCache = watchlistCache.filter((entry) => entry.movie_id !== movie.movie_id);
+    updateWatchlistButtons();
+    renderWatchlist();
+  }
+}
+
+/**
+ * Removes a film from the authenticated user's watchlist, optimistically
+ * updating the UI and rolling back if the backend call fails.
+ */
+async function removeFromWatchlist(movieId) {
+  if (!authState.authenticated) return;
+
+  const previous = watchlistCache;
+  watchlistCache = watchlistCache.filter((entry) => entry.movie_id !== movieId);
+  updateWatchlistButtons();
+  renderWatchlist();
+
+  const { ok } = await apiFetch(`/api/watchlist/${movieId}`, { method: "DELETE" });
+
+  if (!ok) {
+    watchlistCache = previous;
+    updateWatchlistButtons();
+    renderWatchlist();
+  }
 }
 
 function toggleWatchlist(movie) {
@@ -799,6 +1172,25 @@ function buildWatchlistEmptyStateMarkup() {
       <p class="empty-state__label">Screen 02 &middot; Your Archive</p>
       <p class="empty-state__title">Your screening list is empty.</p>
       <p class="empty-state__copy">Save a film and it will wait here for you.</p>
+    </div>
+  `;
+}
+
+/**
+ * Shown in place of the Watchlist when a logged-out visitor reaches
+ * it. Never renders another user's data — there's simply no data to
+ * show until the visitor signs in.
+ */
+function buildWatchlistAuthPromptMarkup() {
+  return `
+    <div class="empty-state">
+      <p class="empty-state__label">Screen 02 &middot; Your Archive</p>
+      <p class="empty-state__title">Your archive is waiting.</p>
+      <p class="empty-state__copy">Sign in to keep your screenings.</p>
+      <div class="empty-state__actions">
+        <button type="button" class="landing__btn landing__btn--primary landing__btn--sm" data-role="watchlist-signin">Sign In</button>
+        <button type="button" class="landing__btn landing__btn--ghost landing__btn--sm" data-role="watchlist-create-account">Create Account</button>
+      </div>
     </div>
   `;
 }
@@ -888,21 +1280,34 @@ function createWatchlistCard(movie, filmNumber) {
 }
 
 /**
- * Rebuilds the entire Watchlist section from localStorage: an elegant
- * empty state, or a card grid of every saved film.
+ * Rebuilds the entire Watchlist section: a sign-in prompt when
+ * logged out, an elegant empty state when logged in with nothing
+ * saved yet, or a card grid of every saved film — always sourced
+ * from watchlistCache, never from localStorage.
  */
 function renderWatchlist() {
-  const list = getWatchlist();
   watchlistRegion.innerHTML = "";
 
-  if (list.length === 0) {
+  if (!authState.authenticated) {
+    watchlistRegion.innerHTML = buildWatchlistAuthPromptMarkup();
+
+    const signInBtn = watchlistRegion.querySelector('[data-role="watchlist-signin"]');
+    if (signInBtn) signInBtn.addEventListener("click", () => openAuthModal("login"));
+
+    const createAccountBtn = watchlistRegion.querySelector('[data-role="watchlist-create-account"]');
+    if (createAccountBtn) createAccountBtn.addEventListener("click", () => openAuthModal("register"));
+
+    return;
+  }
+
+  if (watchlistCache.length === 0) {
     watchlistRegion.innerHTML = buildWatchlistEmptyStateMarkup();
     return;
   }
 
   const grid = document.createElement("div");
   grid.className = "card-grid";
-  list.forEach((movie, i) => grid.appendChild(createWatchlistCard(movie, i + 1)));
+  watchlistCache.forEach((movie, i) => grid.appendChild(createWatchlistCard(movie, i + 1)));
   watchlistRegion.appendChild(grid);
   animateMatchBars(watchlistRegion);
 }
@@ -1166,5 +1571,20 @@ suggestionButtons.forEach((btn) => {
 // Initialize with the empty state on load (also resets the hero panel).
 showEmptyState();
 
-// Restore any previously saved Watchlist.
-renderWatchlist();
+/**
+ * On load: confirm the session with the backend (never assume
+ * authentication from anything stored locally), then show the
+ * landing page or step straight into the cinema accordingly, and
+ * load the watchlist only once we know who — if anyone — is signed in.
+ */
+(async function initApp() {
+  await checkAuth();
+
+  if (authState.authenticated) {
+    showAppView();
+  } else {
+    showLandingView();
+  }
+
+  await loadWatchlist();
+})();
