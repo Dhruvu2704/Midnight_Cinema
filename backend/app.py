@@ -99,6 +99,7 @@ def home():
 # RECOMMENDATIONS
 # =========================================================
 
+@app.route("/api/recommend", methods=["GET"])
 @app.route("/recommend", methods=["GET"])
 def get_recommendations():
 
