@@ -7,17 +7,13 @@
     },
     {
       "source": "/",
-      "destination": "/frontend/index.html"
-    },
-    {
-      "source": "/:path*",
-      "destination": "/frontend/:path*"
+      "destination": "/index.html"
     }
   ],
   "functions": {
     "backend/vercel_app.py": {
       "maxDuration": 30,
-      "excludeFiles": "{frontend/**,public/**,data/raw/**,backend/midnight_cinema.db,backend/__pycache__/**,**/__pycache__/**,venv/**,.venv/**,**/*.pyc}"
+      "excludeFiles": "{data/raw/**,backend/midnight_cinema.db,backend/__pycache__/**,**/__pycache__/**,venv/**,.venv/**,**/*.pyc}"
     }
   }
 }
